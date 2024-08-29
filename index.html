@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -110,7 +109,6 @@
         }
     </style>
 </head>
-
 <body>
     <div id="matrixBackground">
         <canvas id="matrixCanvas"></canvas>
@@ -132,7 +130,6 @@
         let eventIdsHexGlobal = [];
         let mediaSource;
         let sourceBuffer;
-        let autoplayAttempted = false;
         let matrixContent = '';  
         let isFragmentLoadingStarted = false;
 
@@ -144,12 +141,12 @@
         matrixCanvas.width = window.innerWidth;
         matrixCanvas.height = window.innerHeight;
 
-        const fontSize = 16;
+        let fontSize = 16; 
         const columns = matrixCanvas.width / fontSize;
         const drops = Array.from({ length: columns }, () => 1);
 
         function drawMatrix() {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)'; 
             ctx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
 
             ctx.fillStyle = '#0F0';
@@ -174,7 +171,9 @@
                 isFragmentLoadingStarted = true;
                 document.body.classList.add('matrix-mode');
                 drawMatrix(); 
+                //fetchPostContent('4fd0ee46f7ed68c0343a219ffa9ca479df84b6f2cb95d7f313394038d2383e37');
                 fetchPostContent('9bcf3052239e5425f5a35acc265d8842418d3449f18d59203b4ae62cbba4a328');
+                analyzeAudio(); 
             }
         }
 
@@ -298,6 +297,28 @@
             }
         }
 
+        function analyzeAudio() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaElementSource(audioPlayer);
+            const analyzer = audioContext.createAnalyser();
+
+            source.connect(analyzer);
+            analyzer.connect(audioContext.destination);
+
+            analyzer.fftSize = 256;
+            const bufferLength = analyzer.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function analyze() {
+                analyzer.getByteFrequencyData(dataArray);
+                const average = dataArray.reduce((a, b) => a + b) / bufferLength;
+                fontSize = Math.max(16, average / 4); 
+                requestAnimationFrame(analyze);
+            }
+
+            analyze();
+        }
+
         
         window.addEventListener('resize', () => {
             matrixCanvas.width = window.innerWidth;
@@ -311,5 +332,4 @@
         audioPlayer.addEventListener('play', startLoadingFragments);
     </script>
 </body>
-
 </html>
