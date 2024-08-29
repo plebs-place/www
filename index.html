@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plebs.Place</title>
     <style>
+        /* Estilo original do site */
         :root {
             --background-color: #ffffff;
             --text-color: #000000;
@@ -30,16 +32,23 @@
             color: var(--text-color);
             font-family: Arial, sans-serif;
             text-align: center;
+            overflow: hidden;
+            transition: all 1s ease-in-out;
+            position: relative;
         }
 
         h1 {
             font-size: 3rem;
             margin: 0;
+            z-index: 10;
+            position: relative;
         }
 
         p {
             font-size: 1.25rem;
             margin-top: 1rem;
+            z-index: 10;
+            position: relative;
         }
 
         .highlight {
@@ -47,14 +56,260 @@
             margin-top: 2rem;
             color: var(--highlight-color);
             font-weight: bold;
+            z-index: 10;
+            position: relative;
+        }
+
+        #audioPlayerContainer {
+            margin-top: 2rem;
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin-left: auto;
+            margin-right: auto;
+            z-index: 10;
+            position: relative;
+        }
+
+        audio {
+            width: 100%;
+            z-index: 10;
+            position: relative;
+        }
+
+        /* Estilo Matrix oculto inicialmente */
+        #matrixBackground {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            overflow: hidden;
+            z-index: 1; /* Fica atrás do conteúdo principal */
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 1s ease-in-out;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .matrix-mode {
+            --background-color: #000000;
+            --text-color: #00ff00;
+            --highlight-color: #00ff00;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        .matrix-mode #matrixBackground {
+            opacity: 1;
         }
     </style>
 </head>
+
 <body>
+    <div id="matrixBackground">
+        <canvas id="matrixCanvas"></canvas>
+    </div>
+
     <div>
         <h1>Plebs.Place</h1>
         <p>O serviço plebs.place estará de volta em breve.</p>
         <p class="highlight">A verificação dos NIP-5 já existentes foi preservada.</p>
+        <div id="audioPlayerContainer">
+            <audio id="audioPlayer" controls>
+                Seu navegador não suporta o elemento de áudio.
+            </audio>
+        </div>
     </div>
+
+    <script>
+        const relayUrl = 'wss://relay.primal.net';
+        let eventIdsHexGlobal = [];
+        let mediaSource;
+        let sourceBuffer;
+        let autoplayAttempted = false;
+        let matrixContent = '';  
+        let isFragmentLoadingStarted = false;
+
+        const audioPlayer = document.getElementById('audioPlayer');
+        const matrixBackgroundDiv = document.getElementById('matrixBackground');
+        const matrixCanvas = document.getElementById('matrixCanvas');
+        const ctx = matrixCanvas.getContext('2d');
+
+        matrixCanvas.width = window.innerWidth;
+        matrixCanvas.height = window.innerHeight;
+
+        const fontSize = 16;
+        const columns = matrixCanvas.width / fontSize;
+        const drops = Array.from({ length: columns }, () => 1);
+
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.05)';
+            ctx.fillRect(0, 0, matrixCanvas.width, matrixCanvas.height);
+
+            ctx.fillStyle = '#0F0';
+            ctx.font = fontSize + 'px Courier, monospace';
+
+            for (let i = 0; i < drops.length; i++) {
+                const text = matrixContent.charAt(Math.floor(Math.random() * matrixContent.length));
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+
+                if (drops[i] * fontSize > matrixCanvas.height && Math.random() > 0.975) {
+                    drops[i] = 0;
+                }
+
+                drops[i]++;
+            }
+
+            requestAnimationFrame(drawMatrix);
+        }
+
+        function startLoadingFragments() {
+            if (!isFragmentLoadingStarted) {
+                isFragmentLoadingStarted = true;
+                document.body.classList.add('matrix-mode');
+                drawMatrix(); 
+                fetchPostContent('9bcf3052239e5425f5a35acc265d8842418d3449f18d59203b4ae62cbba4a328');
+            }
+        }
+
+        async function fetchPostContent(postId) {
+            const eventIdsHex = await fetchEventIds(postId);
+            if (eventIdsHex.length > 0) {
+                eventIdsHexGlobal = eventIdsHex;
+                await processEvents();
+            }
+        }
+
+        async function fetchEventIds(postId) {
+            return new Promise((resolve, reject) => {
+                const ws = new WebSocket(relayUrl);
+                const subscriptionId = 'sub_' + Date.now();
+
+                ws.onopen = function () {
+                    const reqMessage = ["REQ", subscriptionId, { "ids": [postId] }];
+                    ws.send(JSON.stringify(reqMessage));
+                };
+
+                ws.onmessage = function (event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data[0] === "EVENT" && data[1] === subscriptionId) {
+                            const content = JSON.parse(data[2].content);
+                            if (content.fragment_ids) {
+                                const eventIdsHex = content.fragment_ids;
+                                resolve(eventIdsHex);
+                            } else {
+                                resolve([]);
+                            }
+                            ws.close();
+                        }
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                ws.onerror = function (err) {
+                    reject(err);
+                };
+
+                ws.onclose = function () {};
+            });
+        }
+
+        function initializeMediaSource() {
+            mediaSource = new MediaSource();
+            audioPlayer.src = URL.createObjectURL(mediaSource);
+
+            mediaSource.addEventListener('sourceopen', () => {
+                sourceBuffer = mediaSource.addSourceBuffer('audio/mpeg');
+                sourceBuffer.mode = 'sequence';
+
+                
+                const silentFragment = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
+                sourceBuffer.appendBuffer(silentFragment.buffer);
+            });
+        }
+
+        async function processEvents(startIndex = 0) {
+            return new Promise((resolve, reject) => {
+                const ws = new WebSocket(relayUrl);
+                const subscriptionId = 'sub_' + Date.now();
+
+                ws.onopen = function () {
+                    for (let i = startIndex; i < eventIdsHexGlobal.length; i++) {
+                        const eventIdHex = eventIdsHexGlobal[i];
+                        const reqMessage = ["REQ", subscriptionId, { "ids": [eventIdHex] }];
+                        ws.send(JSON.stringify(reqMessage));
+                    }
+                };
+
+                ws.onmessage = function (event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        if (data[0] === "EVENT" && data[1] === subscriptionId) {
+                            const content = JSON.parse(data[2].content);
+                            if (content.part) {
+                                const audioData = atob(content.part);
+                                const audioBuffer = new Uint8Array(audioData.length);
+                                for (let i = 0; i < audioData.length; i++) {
+                                    audioBuffer[i] = audioData.charCodeAt(i);
+                                }
+                                appendBuffer(audioBuffer);
+                                addToMatrixContent(content.part);  
+                            }
+                        }
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+
+                ws.onerror = function (err) {
+                    reject(err);
+                };
+
+                ws.onclose = function () {
+                    if (startIndex < eventIdsHexGlobal.length) {
+                        processEvents(startIndex + 1).then(resolve).catch(reject);
+                    } else {
+                        resolve();
+                    }
+                };
+            });
+        }
+
+        function appendBuffer(buffer) {
+            if (sourceBuffer && !sourceBuffer.updating) {
+                sourceBuffer.appendBuffer(buffer);
+            } else {
+                setTimeout(() => appendBuffer(buffer), 100);
+            }
+        }
+
+        function addToMatrixContent(text) {
+            matrixContent += text;
+            if (matrixContent.length > 5000) {  
+                matrixContent = matrixContent.slice(-5000);
+            }
+        }
+
+        
+        window.addEventListener('resize', () => {
+            matrixCanvas.width = window.innerWidth;
+            matrixCanvas.height = window.innerHeight;
+        });
+
+        
+        initializeMediaSource();
+
+        
+        audioPlayer.addEventListener('play', startLoadingFragments);
+    </script>
 </body>
+
 </html>
