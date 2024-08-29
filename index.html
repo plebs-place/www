@@ -1,1 +1,60 @@
-teste
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plebs.Place</title>
+    <style>
+        :root {
+            --background-color: #ffffff;
+            --text-color: #000000;
+            --highlight-color: #ff6347;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --background-color: #000000;
+                --text-color: #ffffff;
+                --highlight-color: #ffa07a;
+            }
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin: 0;
+        }
+
+        p {
+            font-size: 1.25rem;
+            margin-top: 1rem;
+        }
+
+        .highlight {
+            font-size: 1rem;
+            margin-top: 2rem;
+            color: var(--highlight-color);
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>Plebs.Place</h1>
+        <p>O serviço plebs.place estará de volta em breve.</p>
+        <p class="highlight">A verificação dos NIP-5 já existentes foi preservada.</p>
+    </div>
+</body>
+</html>
