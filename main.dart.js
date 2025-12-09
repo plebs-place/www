@@ -42525,7 +42525,7 @@ $35$alignLabelWithHint$border$constraints$contentPadding$counterStyle$disabledBo
 $2$enabled$hintMaxLines(a,b){return this.J(this,A.R("call","$2$enabled$hintMaxLines",0,[a,b],["enabled","hintMaxLines"],0))},
 $4$counterStyle$counterText$errorText$semanticCounterText(a,b,c,d){return this.J(this,A.R("call","$4$counterStyle$counterText$errorText$semanticCounterText",0,[a,b,c,d],["counterStyle","counterText","errorText","semanticCounterText"],0))},
 $2$counterText$semanticCounterText(a,b){return this.J(this,A.R("call","$2$counterText$semanticCounterText",0,[a,b],["counterText","semanticCounterText"],0))},
-$3$allowMultiple$type$withData(a,b,c){return this.J(this,A.R("call","$3$allowMultiple$type$withData",0,[a,b,c],["allowMultiple","type","withData"],0))},
+$4$allowMultiple$allowedExtensions$type$withData(a,b,c,d){return this.J(this,A.R("call","$4$allowMultiple$allowedExtensions$type$withData",0,[a,b,c,d],["allowMultiple","allowedExtensions","type","withData"],0))},
 $2$options$source(a,b){return this.J(this,A.R("call","$2$options$source",0,[a,b],["options","source"],0))},
 $6(a,b,c,d,e,f){return this.J(this,A.R("call","$6",0,[a,b,c,d,e,f],[],0))},
 $3$onDone$onError(a,b,c){return this.J(this,A.R("call","$3$onDone$onError",0,[a,b,c],["onDone","onError"],0))},
@@ -91093,7 +91093,7 @@ A4(){var s=0,r=A.w(t.H),q=1,p=[],o=this,n,m,l,k
 var $async$A4=A.x(function(a,b){if(a===1){p.push(b)
 s=q}for(;;)switch(s){case 0:q=3
 s=6
-return A.q(A.aWS().azy(!1,B.I0,!0),$async$A4)
+return A.q(A.aWS().azy(!1,A.a(["mp3","wav","ogg","m4a","aac","flac","webm"],t.s),B.I0,!0),$async$A4)
 case 6:n=b
 q=1
 s=5
@@ -103532,7 +103532,7 @@ B.i4=new A.lt(!1,!1,!1,!1)
 B.i5=new A.lt(!1,!1,!1,!0)
 B.kZ=new A.lt(!0,!1,!1,!1)
 B.l_=new A.lt(!0,!1,!1,!0)
-B.I0=new A.a8t(4,"audio")
+B.I0=new A.a8t(5,"custom")
 B.I1=new A.BC(null)
 B.dk=new A.qW(0,"none")
 B.I2=new A.qW(1,"low")
