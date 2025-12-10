@@ -1,11 +1,11 @@
 {
-    "name": "NostrAnon",
-    "short_name": "NostrAnon",
+    "name": "Plebs.Place",
+    "short_name": "Plebs.Place",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#1A1A2E",
     "theme_color": "#7C3AED",
-    "description": "Anonymous posting on Nostr protocol",
+    "description": "Anonymous forum on Nostr protocol",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
