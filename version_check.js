@@ -21,6 +21,10 @@
       localStorage.setItem(STORAGE_KEY, window.newVersion);
     }
 
+    // Clear update flag
+    localStorage.removeItem('pwa_update_available');
+    window.updateAvailable = false;
+
     if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
       // Tell the waiting service worker to activate
       navigator.serviceWorker.controller.postMessage({ type: 'SKIP_WAITING' });
@@ -48,6 +52,10 @@
     window.updateAvailable = true;
     window.newVersion = version;
     window.releaseNotes = notes;
+
+    // Set localStorage flags for Dart to read
+    localStorage.setItem('pwa_update_available', 'true');
+    localStorage.setItem('pwa_new_version', version);
 
     // Notify Flutter if callback is set
     if (typeof window.onUpdateAvailable === 'function') {
