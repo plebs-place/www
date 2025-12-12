@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cotacao Historica do Bitcoin</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #f7931a;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 1.8rem;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 0.9rem;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 15px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        input[type="date"],
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input[type="date"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #f7931a;
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #f7931a 0%, #e8850f 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(247, 147, 26, 0.4);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result {
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 15px;
+            display: none;
+        }
+
+        .result.show {
+            display: block;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result h3 {
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.8rem;
+            margin-bottom: 5px;
+        }
+
+        .stat-value {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: #2d3436;
+        }
+
+        .stat-value.green { color: #27ae60; }
+        .stat-value.red { color: #e74c3c; }
+        .stat-value.blue { color: #2980b9; }
+
+        .error {
+            background: #ffe6e6;
+            color: #c0392b;
+            padding: 15px;
+            border-radius: 10px;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #666;
+            margin-top: 20px;
+        }
+
+        .loading::after {
+            content: '';
+            animation: dots 1.5s infinite;
+        }
+
+        @keyframes dots {
+            0%, 20% { content: '.'; }
+            40% { content: '..'; }
+            60%, 100% { content: '...'; }
+        }
+
+        .api-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #e8f4f8;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .api-info a {
+            color: #f7931a;
+            text-decoration: none;
+        }
+
+        .bitcoin-icon {
+            font-size: 3rem;
+            text-align: center;
+            margin-bottom: 15px;
+            color: #f7931a;
+        }
+
+        /* Stackbit Banner */
+        .stackbit-banner {
+            margin-top: 30px;
+            padding: 25px;
+            background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 50%, #1a1a1a 100%);
+            border-radius: 15px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            border: 2px solid #f7c600;
+        }
+
+        .stackbit-banner h4 {
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #f7c600;
+        }
+
+        .stackbit-banner p {
+            font-size: 0.9rem;
+            opacity: 0.95;
+            margin-bottom: 15px;
+            line-height: 1.5;
+            color: #e0e0e0;
+        }
+
+        .stackbit-banner .features {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .stackbit-banner .feature-tag {
+            background: rgba(247, 198, 0, 0.15);
+            border: 1px solid #f7c600;
+            color: #f7c600;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .stackbit-banner .cta-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #f7c600 0%, #e6b800 100%);
+            color: #1a1a1a;
+            padding: 12px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 1rem;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .stackbit-banner .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(247, 198, 0, 0.4);
+        }
+
+        .stackbit-banner .slogan {
+            margin-top: 15px;
+            font-size: 0.75rem;
+            color: #f7c600;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 500px) {
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+            .form-row {
+                flex-direction: column;
+                gap: 0;
+            }
+            .stackbit-banner .features {
+                flex-direction: column;
+                align-items: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="bitcoin-icon">&#8383;</div>
+        <h1>Cotacao do Bitcoin</h1>
+        <p class="subtitle">Consulte o preco historico do Bitcoin com grafico de variacao diaria</p>
+
+        <form id="cotacaoForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="data">Data:</label>
+                    <input type="date" id="data" required>
+                </div>
+                <div class="form-group">
+                    <label for="moeda">Moeda:</label>
+                    <select id="moeda">
+                        <option value="usd">Dolar (USD)</option>
+                        <option value="brl">Real (BRL)</option>
+                        <option value="eur">Euro (EUR)</option>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" id="btnConsultar">Consultar Cotacao do Dia</button>
+        </form>
+
+        <div id="loading" class="loading" style="display: none;">
+            Consultando cotacao
+        </div>
+
+        <div id="resultado" class="result">
+            <h3 id="tituloResultado"></h3>
+            <div class="chart-container">
+                <canvas id="graficoPreco"></canvas>
+            </div>
+            <div class="stats-grid" id="estatisticas"></div>
+        </div>
+
+        <div class="api-info">
+            <strong>API utilizada:</strong><br>
+            - <a href="https://www.coingecko.com/api" target="_blank">CoinGecko API</a> - Dados historicos gratuitos
+        </div>
+
+        <!-- Stackbit Banner -->
+        <div class="stackbit-banner">
+            <h4>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm0 2.18l7 3.12v5.7c0 4.47-2.98 8.65-7 9.88-4.02-1.23-7-5.41-7-9.88v-5.7l7-3.12z"/>
+                    <path d="M12 6L8 8v3c0 2.22 1.21 4.15 3 5.19V6zm0 0l4 2v3c0 2.22-1.21 4.15-3 5.19V6z"/>
+                </svg>
+                STACKBIT
+            </h4>
+            <p>
+                <strong>Carteira de metal para suas seeds de Bitcoin</strong><br>
+                A metalwallet mais resistente do Brasil. Proteja suas criptomoedas com seguranca fisica extrema.
+            </p>
+            <div class="features">
+                <span class="feature-tag">A prova de fogo (+1200C)</span>
+                <span class="feature-tag">A prova de ferrugem</span>
+                <span class="feature-tag">A prova de bala</span>
+                <span class="feature-tag">100% Brasileiro</span>
+            </div>
+            <a href="https://stackbit.me/" target="_blank" class="cta-button">
+                Conhecer Stackbit
+            </a>
+            <p class="slogan">
+                PROTEJA SUA SEED PARA SEMPRE
+            </p>
+        </div>
+    </div>
+
+    <script>
+        let grafico = null;
+
+        // Configurar data maxima como ontem (dados de hoje podem estar incompletos)
+        const dataInput = document.getElementById('data');
+        const hoje = new Date();
+        const ontem = new Date(hoje);
+        ontem.setDate(ontem.getDate() - 1);
+
+        dataInput.max = ontem.toISOString().split('T')[0];
+        dataInput.min = '2013-04-28';
+        dataInput.value = ontem.toISOString().split('T')[0];
+
+        document.getElementById('cotacaoForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const data = document.getElementById('data').value;
+            const moeda = document.getElementById('moeda').value;
+            const btnConsultar = document.getElementById('btnConsultar');
+            const loading = document.getElementById('loading');
+            const resultado = document.getElementById('resultado');
+
+            btnConsultar.disabled = true;
+            loading.style.display = 'block';
+            resultado.classList.remove('show');
+
+            try {
+                const dadosDia = await consultarDiaCompleto(data, moeda);
+                exibirResultado(dadosDia, data, moeda);
+            } catch (error) {
+                document.getElementById('estatisticas').innerHTML =
+                    '<div class="error" style="grid-column: 1 / -1;">Erro ao consultar: ' + error.message + '</div>';
+                resultado.classList.add('show');
+            } finally {
+                btnConsultar.disabled = false;
+                loading.style.display = 'none';
+            }
+        });
+
+        async function consultarDiaCompleto(data, moeda) {
+            // Criar timestamps para inicio e fim do dia
+            const dataInicio = new Date(data + 'T00:00:00');
+            const dataFim = new Date(data + 'T23:59:59');
+
+            const fromTimestamp = Math.floor(dataInicio.getTime() / 1000);
+            const toTimestamp = Math.floor(dataFim.getTime() / 1000);
+
+            const url = 'https://api.coingecko.com/api/v3/coins/bitcoin/market_chart/range?vs_currency=' + moeda + '&from=' + fromTimestamp + '&to=' + toTimestamp;
+
+            const response = await fetch(url);
+
+            if (!response.ok) {
+                if (response.status === 429) {
+                    throw new Error('Limite de requisicoes excedido. Aguarde 1 minuto e tente novamente.');
+                }
+                if (response.status === 0) {
+                    throw new Error('Erro de conexao. Verifique sua internet ou tente usar HTTPS.');
+                }
+                throw new Error('Falha ao consultar API (erro ' + response.status + ')');
+            }
+
+            const dados = await response.json();
+
+            if (!dados.prices || dados.prices.length === 0) {
+                throw new Error('Dados nao disponiveis para esta data. Tente uma data mais recente.');
+            }
+
+            return {
+                precos: dados.prices,
+                volumes: dados.total_volumes || [],
+                marketCaps: dados.market_caps || []
+            };
+        }
+
+        function exibirResultado(dados, data, moeda) {
+            const dataObj = new Date(data + 'T12:00:00');
+            const dataFormatada = dataObj.toLocaleDateString('pt-BR', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            document.getElementById('tituloResultado').textContent = dataFormatada;
+
+            // Preparar dados para o grafico
+            const labels = [];
+            const valores = [];
+
+            for (const item of dados.precos) {
+                const hora = new Date(item[0]);
+                labels.push(hora.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }));
+                valores.push(item[1]);
+            }
+
+            // Calcular estatisticas
+            const precoMinimo = Math.min(...valores);
+            const precoMaximo = Math.max(...valores);
+            const precoAbertura = valores[0];
+            const precoFechamento = valores[valores.length - 1];
+            const variacao = ((precoFechamento - precoAbertura) / precoAbertura) * 100;
+            const precoMedio = valores.reduce((a, b) => a + b, 0) / valores.length;
+
+            // Destruir grafico anterior se existir
+            if (grafico) {
+                grafico.destroy();
+            }
+
+            // Criar novo grafico
+            const ctx = document.getElementById('graficoPreco').getContext('2d');
+            const corLinha = variacao >= 0 ? '#27ae60' : '#e74c3c';
+
+            grafico = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Preco BTC (' + moeda.toUpperCase() + ')',
+                        data: valores,
+                        borderColor: corLinha,
+                        backgroundColor: corLinha + '20',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.1,
+                        pointRadius: 0,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return formatarMoeda(context.raw, moeda);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                maxTicksLimit: 8
+                            }
+                        },
+                        y: {
+                            display: true,
+                            grid: {
+                                color: '#eee'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return formatarMoedaCurto(value, moeda);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Exibir estatisticas
+            const variacaoClass = variacao >= 0 ? 'green' : 'red';
+            const variacaoSimbolo = variacao >= 0 ? '+' : '';
+
+            document.getElementById('estatisticas').innerHTML =
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Abertura (00:00)</span>' +
+                    '<span class="stat-value">' + formatarMoeda(precoAbertura, moeda) + '</span>' +
+                '</div>' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Fechamento (23:59)</span>' +
+                    '<span class="stat-value">' + formatarMoeda(precoFechamento, moeda) + '</span>' +
+                '</div>' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Minima do dia</span>' +
+                    '<span class="stat-value red">' + formatarMoeda(precoMinimo, moeda) + '</span>' +
+                '</div>' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Maxima do dia</span>' +
+                    '<span class="stat-value green">' + formatarMoeda(precoMaximo, moeda) + '</span>' +
+                '</div>' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Preco medio</span>' +
+                    '<span class="stat-value blue">' + formatarMoeda(precoMedio, moeda) + '</span>' +
+                '</div>' +
+                '<div class="stat-item">' +
+                    '<span class="stat-label">Variacao do dia</span>' +
+                    '<span class="stat-value ' + variacaoClass + '">' + variacaoSimbolo + variacao.toFixed(2) + '%</span>' +
+                '</div>';
+
+            document.getElementById('resultado').classList.add('show');
+        }
+
+        function formatarMoeda(valor, moeda) {
+            const config = {
+                'usd': { locale: 'en-US', currency: 'USD' },
+                'brl': { locale: 'pt-BR', currency: 'BRL' },
+                'eur': { locale: 'de-DE', currency: 'EUR' }
+            };
+
+            const c = config[moeda] || config['usd'];
+
+            return new Intl.NumberFormat(c.locale, {
+                style: 'currency',
+                currency: c.currency,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(valor);
+        }
+
+        function formatarMoedaCurto(valor, moeda) {
+            const simbolos = { 'usd': '$', 'brl': 'R$', 'eur': '€' };
+            const simbolo = simbolos[moeda] || '$';
+
+            if (valor >= 1000000) {
+                return simbolo + (valor / 1000000).toFixed(1) + 'M';
+            } else if (valor >= 1000) {
+                return simbolo + (valor / 1000).toFixed(1) + 'K';
+            }
+            return simbolo + valor.toFixed(0);
+        }
+    </script>
+</body>
+</html>
